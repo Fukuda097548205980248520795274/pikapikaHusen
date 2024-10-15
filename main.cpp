@@ -145,6 +145,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	player.radius = { 10.0f , 10.0f };
 
 
+	/*   プレイヤーの当たり判定   */
+	float playerHitBoxWorldPosX = player.pos.world.x;
+	float playerHitBoxWorldPosY = player.pos.world.y;
+	float playerHitBoxRadius = 32;
+
+	float playerHitBoxScreenPosX;
+	float playerHitBoxScreenPosY;
+
 	/*   画像   */
 
 	// 白い図形
@@ -228,6 +236,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// 左右に動かす
 		player.pos.world.x += player.vel.x;
 
+		// 飛行している（飛行フラグがtrueである）とき、当たり判定が大きくなる
+		if (player.flug.isFlying)
+		{
+			playerHitBoxRadius += 0.15f;
+
+		} else
+		{
+			// 飛行していない（飛行フラグがfalseである）とき、当たり判定が小さくなる
+			if (playerHitBoxRadius > 32)
+			{
+				playerHitBoxRadius -= 0.15f;
+			}
+		}
+
+		//当たり判定
+		playerHitBoxWorldPosX = player.pos.world.x;
+		playerHitBoxWorldPosY = -player.pos.world.y;
 
 		/*-------------------
 		    座標変換を行う
@@ -235,6 +260,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		// プレイヤー
 		player.pos.screen = CoordinateTransformation(player.pos.world);
+
+		//プレイヤーの当たり判定
+
+		playerHitBoxScreenPosX = playerHitBoxWorldPosX;
+		playerHitBoxScreenPosY = playerHitBoxWorldPosY + (kHeight - 100.0f);
 
 		///
 		/// ↑更新処理ここまで
@@ -250,6 +280,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		/*   プレイヤー   */
 
+		Novice::DrawEllipse(static_cast<int>(playerHitBoxScreenPosX),
+			static_cast<int>(playerHitBoxScreenPosY),
+			static_cast<int>(playerHitBoxRadius),
+			static_cast<int>(playerHitBoxRadius), 0.0f, 0xED1C24FF, kFillModeWireFrame);
+
 		Novice::DrawQuad
 		(
 			static_cast<int>(player.pos.screen.x - player.radius.x) , static_cast<int>(player.pos.screen.y - player.radius.y),
@@ -258,7 +293,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			static_cast<int>(player.pos.screen.x + player.radius.x), static_cast<int>(player.pos.screen.y + player.radius.y),
 			0,0,1,1,ghWhite,0xFFFFFFFF
 		);
-
 
 		///
 		/// ↑描画処理ここまで
