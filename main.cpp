@@ -90,7 +90,7 @@ struct Enemy
 ---------------*/
 
 // 縦幅
-const int kHeight = 100;
+const int kHeight = 800;
 
 // 横幅
 const int kWidth = 700;
