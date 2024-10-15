@@ -75,13 +75,17 @@ struct Player
 // 敵
 struct Enemy
 {
+	// 出現しているかどうか（出現フラグ）
+	int isArrival;
+
 	// 位置
 	struct Pos pos;
 
 	// 移動速度
 	struct Vel2 vel;
 
-	// 
+	// 図形の半径
+	struct Radius2 radius;
 };
 
 
