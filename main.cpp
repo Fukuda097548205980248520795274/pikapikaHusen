@@ -653,21 +653,33 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 			}
 
-
 			// プレイヤー と 敵
 			for (int i = 0; i < kEnemyNum; i++)
 			{
 				if (enemy[i].isArrival)
 				{
-					if (powf(player.radius + enemy[i].radius, 2) >=
-						powf(player.pos.world.x - enemy[i].pos.world.x, 2) + powf(player.pos.world.y - enemy[i].pos.world.y, 2))
+					// 通常の敵
+					if (enemy[i].type != ENEMY_TYPE_DENGER)
 					{
-						// プレイヤーがやられる（復活フラグがfalseになる）
-						player.respawn.isRespawn = false;
+						if (powf(player.radius + enemy[i].radius, 2) >=
+							powf(player.pos.world.x - enemy[i].pos.world.x, 2) + powf(player.pos.world.y - enemy[i].pos.world.y, 2))
+						{
+							// プレイヤーがやられる（復活フラグがfalseになる）
+							player.respawn.isRespawn = false;
+						}
+					}
+					else
+					{
+						// 危険な何か
+
+						if (enemy[i].pos.world.y - enemy[i].radius < player.pos.world.y + player.radius)
+						{
+							// プレイヤーがやられる（復活フラグがfalseになる）
+							player.respawn.isRespawn = false;
+						}
 					}
 				}
 			}
-
 
 			// プレイヤー と アイテム
 			if (player.respawn.isRespawn)
@@ -811,6 +823,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					static_cast<int>(item.radius), static_cast<int>(item.radius),
 					0.0f, 0xFFFF00FF, kFillModeSolid
 				);
+			}
+
+
+			// 地面
+			if (isRunAway == false)
+			{
+				Novice::DrawBox(0, kHeight - 100, kWidth, 100, 0.0f, 0xDDDDDDFF, kFillModeSolid);
+			} 
+			else
+			{
+				Novice::DrawBox(0, kHeight - 100, kWidth, 100, 0.0f, 0xFFFF00FF, kFillModeSolid);
 			}
 
 			break;
