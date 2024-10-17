@@ -39,6 +39,16 @@ struct Acceleration2
 	float y;
 };
 
+// 復活
+struct Respawn
+{
+	// 復活しているかどうか（復活フラグ）
+	int isRespawn;
+
+	// 復活処理
+	int timer;
+};
+
 // プレイヤーのフラグ
 struct PlayerFlug
 {
@@ -46,17 +56,13 @@ struct PlayerFlug
 	int isFlying;
 };
 
-// 図形の半径
-struct Radius2
-{
-	float x;
-	float y;
-};
-
 
 // プレイヤー
 struct Player
 {
+	// 復活
+	struct Respawn respawn;
+
 	// 位置
 	struct Pos pos;
 
@@ -70,7 +76,7 @@ struct Player
 	struct PlayerFlug flug;
 
 	// 図形の半径
-	struct Radius2 radius;
+	float radius;
 };
 
 // 敵
@@ -79,6 +85,12 @@ struct Enemy
 	// 出現しているかどうか（出現フラグ）
 	int isArrival;
 
+	// 種類
+	int type;
+
+	// 復活
+	struct Respawn respawn;
+
 	// 位置
 	struct Pos pos;
 
@@ -86,10 +98,29 @@ struct Enemy
 	struct Vel2 vel;
 
 	// 図形の半径
-	struct Radius2 radius;
+	float radius;
 
 	// 透明度
 	int transparency;
+};
+
+// アイテム
+struct Item
+{
+	// 出現しているかどうか（出現フラグ）
+	int isArrival;
+
+	// 復活
+	struct Respawn respawn;
+
+	// 位置
+	struct Pos pos;
+
+	// 移動速度
+	struct Vel2 vel;
+
+	// 図形の半径
+	float radius;
 };
 
 
@@ -108,6 +139,10 @@ const int kWidth = 700;
 const int kEnemyNum = 256;
 
 
+// 復活処理の初期値
+const int initialValueRespawnTimer = 120;
+
+
 /*----------------
     関数を作る
 ----------------*/
@@ -118,6 +153,34 @@ const int kEnemyNum = 256;
 /// <param name="world">ワールド座標</param>
 /// <returns>ワールド座標をスクリーン座標に変換して返却する</returns>
 struct Coordinate2 CoordinateTransformation(struct Coordinate2 world);
+
+/// <summary>
+/// 復活処理を行う
+/// </summary>
+/// <param name="respawn">復活</param>
+void RespawnProcess(struct Respawn* respawn);
+
+/// <summary>
+/// 敵の数値を入れる
+/// </summary>
+/// <param name="enemy">敵</param>
+/// <param name="posX">X軸の位置</param>
+/// <param name="posY">Y軸の位置</param>
+/// <param name="velX">X軸の移動速度</param>
+/// <param name="velY">Y軸の移動速度</param>
+/// <param name="radius">図形の半径</param>
+void MakeEnemy(struct Enemy* enemy, float posX, float posY, float velX, float velY, float radius , int type);
+
+/// <summary>
+/// アイテムの数値を入れる
+/// </summary>
+/// <param name="item">アイテム</param>
+/// <param name="posX">X軸の位置</param>
+/// <param name="posY">Y軸の位置</param>
+/// <param name="velX">X軸の移動速度</param>
+/// <param name="velY">Y軸の移動速度</param>
+/// <param name="radius">図形の半径</param>
+void MakeItem(struct Item* item, float posX, float posY, float velX, float velY, float radius);
 
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -164,10 +227,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int stageNo = -1;
 
 
+	// 逃げているかどうか（逃げるフラグ）
+	int isRunAway = false;
+
+
 	/*   プレイヤー   */
 
 	// 構造体
 	struct Player player;
+
+	// 復活
+	player.respawn.isRespawn = false;
+	player.respawn.timer = 120;
 
 	// 位置
 	player.pos.world = { kWidth / 2 , 0.0f };
@@ -183,7 +254,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	player.flug.isFlying = false;
 
 	// 図形の半径
-	player.radius = { 10.0f , 10.0f };
+	player.radius = 10.0f;
 
 
 	/*   敵   */
@@ -196,6 +267,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// 出現しているかどうか（出現フラグ）
 		enemy[i].isArrival = false;
 
+		// 復活
+		enemy[i].respawn.isRespawn = true;
+		enemy[i].respawn.timer = 120;
+
+		// 種類
+		enemy[i].type = -1;
+
 		// 位置
 		enemy[i].pos.world = { 0.0f , 0.0f };
 		enemy[i].pos.screen = CoordinateTransformation(enemy[i].pos.world);
@@ -204,17 +282,34 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		enemy[i].vel = { 0.0f , 0.0f };
 
 		// 図形の半径
-		enemy[i].radius = { 0.0f , 0.0f };
+		enemy[i].radius = 0.0f;
 
 		// 不透明度
 		enemy[i].transparency = 0;
 	}
 
 
-	/*   画像   */
+	/*   アイテム   */
 
-	// 白い図形
-	int ghWhite = Novice::LoadTexture("./NoviceResources/white1x1.png");
+	struct Item item;
+
+	// 出現しているかどうか
+	item.isArrival = false;
+
+	// 復活
+	item.respawn.isRespawn = true;
+	item.respawn.timer = 120;
+
+	// 位置
+	item.pos = { 0.0f , 0.0f };
+
+	// 移動速度
+	item.vel = { 0.0f , 0.0f };
+
+	// 図形の半径
+	item.radius = 0.0f;
+
+
 
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -259,6 +354,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				{
 					screenNo = SCREEN_TYPE_GAME;
 
+					player.respawn.isRespawn = true;
+
 					stageNo = STAGE_TYPE_1;
 
 					gameFrame = 0;
@@ -288,22 +385,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				// 0フレームで、障害物を出現させる
 				if (gameFrame == 0)
 				{
-					for (int i = 0; i < kEnemyNum; i++)
-					{
-						if (enemy[i].isArrival == false)
-						{
-							// 敵を出現させる（出現フラグがtrueになる）
-							enemy[i].isArrival = true;
+					MakeItem(&item , 350.0f , 650.0f , 0.0f , 0.0f , 20.0f);
 
-							// 敵を配置する
-							enemy[i].pos.world = { 350.0f , 500.0f };
+					MakeEnemy(enemy , 350.0f , 500.0f , 0.0f , 0.0f , 50.0f);
 
-							// 図形の半径
-							enemy[i].radius = { 100.0f , 100.0f };
-
-							break;
-						}
-					}
+					MakeEnemy(enemy, 100.0f, 300.0f, 0.0f, 0.0f, 50.0f);
 				}
 
 				break;
@@ -315,6 +401,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			// ゲームフレームを動かす
 			gameFrame++;
+
+
+			/*---------------
+			    復活処理
+			---------------*/
+
+			// プレイヤー
+			RespawnProcess(&player.respawn);
+
+			// 敵
+			for (int i = 0; i < kEnemyNum; i++)
+			{
+				RespawnProcess(&enemy[i].respawn);
+			}
+
+			// アイテム
+			RespawnProcess(&item.respawn);
 
 
 			/*--------------------
@@ -341,6 +444,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				{
 					player.acceleration.y += 0.1f;
 				}
+
+				// 風船が膨らむ
+				if (player.radius < 50.0f)
+				{
+					player.radius += 0.5f;
+				}
 			} 
 			else
 			{
@@ -348,6 +457,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				if (player.acceleration.y > -1.0f)
 				{
 					player.acceleration.y -= 0.1f;
+				}
+
+				// 風船が縮む
+				if (player.radius > 10.0f)
+				{
+					player.radius--;
+				}
+				else
+				{
+					// 通常より小さくなってはいけない
+					player.radius = 10.0f;
 				}
 			}
 
@@ -365,7 +485,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			{
 				if (player.flug.isFlying)
 				{
-					player.vel.x = -3.0f;
+					if (player.pos.world.x > 0.0f)
+					{
+						player.vel.x = -3.0f;
+					}
 				}
 			}
 
@@ -374,12 +497,36 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			{
 				if (player.flug.isFlying)
 				{
-					player.vel.x = 3.0f;
+					if (player.pos.world.x < static_cast<float>(kWidth))
+					{
+						player.vel.x = 3.0f;
+					}
 				}
 			}
 
 			// 左右に動かす
 			player.pos.world.x += player.vel.x;
+
+			// 画面外に出ないようにする
+			if (player.pos.world.x - player.radius < 0.0f)
+			{
+				player.pos.world.x = player.radius;
+			}
+
+			if (player.pos.world.x + player.radius > static_cast<float>(kWidth))
+			{
+				player.pos.world.x = static_cast<float>(kWidth) - player.radius;
+			}
+
+			if (player.pos.world.y - player.radius < 0.0f)
+			{
+				player.pos.world.y = player.radius;
+			}
+
+			if (player.pos.world.y + player.radius > static_cast<float>(kHeight) - 100.0f)
+			{
+				player.pos.world.y = static_cast<float>(kHeight) - 100.0f - player.radius;
+			}
 
 
 			/*----------------
@@ -391,7 +538,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			{
 				if (enemy[i].isArrival)
 				{
-					if (powf(player.radius.x + enemy[i].radius.x + 150.0f, 2) >
+					if (powf(player.radius + enemy[i].radius + 100.0f, 2) >
 						powf(enemy[i].pos.world.x - player.pos.world.x, 2) + powf(enemy[i].pos.world.y - player.pos.world.y, 2))
 					{
 						// プレイヤーが飛行している（飛行フラグがtrueになる）と、光る
@@ -435,14 +582,30 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			{
 				if (enemy[i].isArrival)
 				{
-					if (player.pos.world.x + player.radius.x > enemy[i].pos.world.x - enemy[i].radius.x &&
-						player.pos.world.x - player.radius.x < enemy[i].pos.world.x + enemy[i].radius.x)
+					if (powf(player.radius + enemy[i].radius, 2) >=
+						powf(player.pos.world.x - enemy[i].pos.world.x, 2) + powf(player.pos.world.y - enemy[i].pos.world.y, 2))
 					{
-						if (player.pos.world.y + player.radius.y > enemy[i].pos.world.y - enemy[i].radius.y &&
-							player.pos.world.y - player.radius.y < enemy[i].pos.world.y + enemy[i].radius.y)
-						{
-							enemy[i].isArrival = false;
-						}
+						// プレイヤーがやられる（復活フラグがfalseになる）
+						player.respawn.isRespawn = false;
+					}
+				}
+			}
+
+
+			// プレイヤー と アイテム
+			if (player.respawn.isRespawn)
+			{
+				if (item.isArrival)
+				{
+					if (powf(player.radius + item.radius, 2) >=
+						powf(player.pos.world.x - item.pos.world.x, 2) + powf(player.pos.world.y - item.pos.world.y, 2))
+					{
+						// アイテムが消える（出現、復活）
+						item.isArrival = false;
+						item.respawn.isRespawn = false;
+
+						// プレイヤーが逃げ始める（逃げるフラグがtrueになる）
+						isRunAway = true;
 					}
 				}
 			}
@@ -452,7 +615,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				座標変換を行う
 			-------------------*/
 
-			// プレイヤー
+			// ふっかつしているプレイヤー
 			player.pos.screen = CoordinateTransformation(player.pos.world);
 
 			// 敵
@@ -460,6 +623,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			{
 				enemy[i].pos.screen = CoordinateTransformation(enemy[i].pos.world);
 			}
+
+			// アイテム
+			item.pos.screen = CoordinateTransformation(item.pos.world);
 
 			///
 			/// ↑ ゲーム画面ここまで
@@ -482,14 +648,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		/*   プレイヤー   */
 
-		Novice::DrawQuad
-		(
-			static_cast<int>(player.pos.screen.x - player.radius.x) , static_cast<int>(player.pos.screen.y - player.radius.y),
-			static_cast<int>(player.pos.screen.x + player.radius.x), static_cast<int>(player.pos.screen.y - player.radius.y),
-			static_cast<int>(player.pos.screen.x - player.radius.x), static_cast<int>(player.pos.screen.y + player.radius.y),
-			static_cast<int>(player.pos.screen.x + player.radius.x), static_cast<int>(player.pos.screen.y + player.radius.y),
-			0,0,1,1,ghWhite,0xFFFFFFFF
-		);
+		if (player.respawn.isRespawn)
+		{
+			Novice::DrawEllipse
+			(
+				static_cast<int>(player.pos.screen.x), static_cast<int>(player.pos.screen.y),
+				static_cast<int>(player.radius), static_cast<int>(player.radius),
+				0.0f, 0xFFFFFFFF, kFillModeSolid
+			);
+		}
 
 		
 		/*   敵   */
@@ -498,16 +665,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{
 			if (enemy[i].isArrival)
 			{
-				Novice::DrawQuad
+				Novice::DrawEllipse
 				(
-					static_cast<int>(enemy[i].pos.screen.x - enemy[i].radius.x), static_cast<int>(enemy[i].pos.screen.y - enemy[i].radius.y),
-					static_cast<int>(enemy[i].pos.screen.x + enemy[i].radius.x), static_cast<int>(enemy[i].pos.screen.y - enemy[i].radius.y),
-					static_cast<int>(enemy[i].pos.screen.x - enemy[i].radius.x), static_cast<int>(enemy[i].pos.screen.y + enemy[i].radius.y),
-					static_cast<int>(enemy[i].pos.screen.x + enemy[i].radius.x), static_cast<int>(enemy[i].pos.screen.y + enemy[i].radius.y),
-					0, 0, 1, 1, ghWhite, 0xFFFFFF00 + enemy[i].transparency
+					static_cast<int>(enemy[i].pos.screen.x), static_cast<int>(enemy[i].pos.screen.y),
+					static_cast<int>(enemy[i].radius) , static_cast<int>(enemy[i].radius) , 
+					0.0f , 0xFFFFFF00 + enemy[i].transparency, kFillModeSolid
 				);
 			}
 		}
+
+
+		/*   アイテム   */
+
+		if (item.isArrival)
+		{
+			Novice::DrawEllipse
+			(
+				static_cast<int>(item.pos.screen.x) , static_cast<int>(item.pos.screen.y),
+				static_cast<int>(item.radius) , static_cast<int>(item.radius),
+				0.0f , 0xFFFF00FF , kFillModeSolid
+			);
+		}
+
 
 
 		///
@@ -535,7 +714,86 @@ struct Coordinate2 CoordinateTransformation(struct Coordinate2 world)
 	struct Coordinate2 screen;
 
 	screen.x = world.x;
-	screen.y = -world.y + (kHeight - 100.0f);
+	screen.y = -world.y + (static_cast<float>(kHeight) - 100.0f);
 
 	return screen;
+}
+
+void RespawnProcess(struct Respawn* respawn)
+{
+	// ヌルを探す
+	if (respawn == nullptr)
+	{
+		return;
+	}
+
+	// やられている（復活フラグがfalseである）ときに行う
+	if (respawn->isRespawn == false)
+	{
+		respawn->timer--;
+
+		if (respawn->timer <= 0)
+		{
+			// 復活する（復活フラグがtrueになる）
+			respawn->isRespawn = true;
+
+			// 復活処理を初期化する
+			respawn->timer = initialValueRespawnTimer;
+		}
+	}
+}
+
+
+void MakeEnemy(struct Enemy* enemy, float posX, float posY, float velX, float velY, float radius , int type)
+{
+	// nullを探す
+	if (enemy == nullptr)
+	{
+		return;
+	}
+
+	for (int i = 0; i < kEnemyNum; i++)
+	{
+		if (enemy[i].isArrival == false)
+		{
+			// 敵を出現させる（出現フラグがtrueになる）
+			enemy[i].isArrival = true;
+
+			// 敵の種類
+			enemy[i].type = type;
+
+			// 配置する
+			enemy[i].pos.world = { posX , posY };
+
+			// 移動速度を指定する
+			enemy[i].vel = { velX , velY };
+
+			// 図形の半径
+			enemy[i].radius = radius;
+
+			break;
+		}
+	}
+}
+
+
+void MakeItem(struct Item* item, float posX, float posY, float velX, float velY, float radius)
+{
+	// nullを探す
+	if (item == nullptr)
+	{
+		return;
+	}
+
+	// アイテムを出現させる（出現フラグをtrueにする）
+	item->isArrival = true;
+
+	// 位置
+	item->pos.world = { posX , posY };
+
+	// 移動速度
+	item->vel = { velX , velY };
+
+	// 図形の半径
+	item->radius = radius;
 }
