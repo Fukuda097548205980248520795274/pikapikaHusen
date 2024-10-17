@@ -396,7 +396,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 					MakeEnemy(enemy , 350.0f , 500.0f , 0.0f , 0.0f , 50.0f , ENEMY_TYPE_STONE);
 
-					MakeEnemy(enemy, 100.0f, 300.0f, 0.0f, 0.0f, 50.0f , ENEMY_TYPE_STONE);
+					MakeEnemy(enemy, 100.0f, 300.0f, 0.0f, 0.0f, 50.0f, ENEMY_TYPE_STONE);
 				}
 
 				break;
