@@ -361,11 +361,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				{
 					screenNo = SCREEN_TYPE_GAME;
 
+					isGameOperation = false;
+
+					gameFrame = 0;
+
 					player.respawn.isRespawn = true;
 
 					stageNo = STAGE_TYPE_1;
-
-					gameFrame = 0;
 				}
 			}
 
@@ -394,9 +396,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				{
 					MakeItem(&item , 350.0f , 650.0f , 0.0f , 0.0f , 20.0f);
 
-					MakeEnemy(enemy , 350.0f , 500.0f , 0.0f , 0.0f , 50.0f , ENEMY_TYPE_STONE);
+					for (int i = 0; i < 8; i++)
+					{
+						MakeEnemy(enemy, 50.0f + 50.0f * i, 500.0f, 0.0f, 0.0f, 20.0f, ENEMY_TYPE_STONE);
+					}
 
-					MakeEnemy(enemy, 100.0f, 300.0f, 0.0f, 0.0f, 50.0f, ENEMY_TYPE_STONE);
+					for (int i = 0; i < 8; i++)
+					{
+						MakeEnemy(enemy, static_cast<float>(kWidth) - 50.0f - 50.0f * i, 250.0f, 0.0f, 0.0f, 20.0f, ENEMY_TYPE_STONE);
+					}
 				}
 
 				break;
@@ -416,6 +424,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			// プレイヤー
 			RespawnProcess(&player.respawn);
+
+			// 初期化する
+			if (player.respawn.isRespawn == false)
+			{
+				// 位置
+				player.pos.world = { kWidth / 2 , 0.0f };
+				player.pos.screen = CoordinateTransformation(player.pos.world);
+
+				// 移動速度
+				player.vel = { 0.0f , 0.0f };
+
+				// 加速度
+				player.acceleration = { 0.0f , 0.0f };
+
+				// フラグ
+				player.flug.isFlying = false;
+
+				// 図形の半径
+				player.radius = 10.0f;
+			}
 
 			// 敵
 			for (int i = 0; i < kEnemyNum; i++)
@@ -478,9 +506,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 			}
 
-			// 上下に動かす
-			player.pos.world.y += 3 * player.acceleration.y;
-
 
 			/* 横移動 */
 
@@ -511,8 +536,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 			}
 
-			// 左右に動かす
+			// Sキーを押すと、飛行中（飛行フラグがtrueであるとき）に上がらないようにする
+			if (keys[DIK_S])
+			{
+				if (player.flug.isFlying)
+				{
+					player.vel = { 0.0f , 0.0f };
+
+					player.acceleration.y = 0.0f;
+				}
+			}
+
+			// プレイヤーを動かす
 			player.pos.world.x += player.vel.x;
+			player.pos.world.y += 3 * player.acceleration.y;
 
 			// 画面外に出ないようにする
 			if (player.pos.world.x - player.radius < 0.0f)
@@ -528,6 +565,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			if (player.pos.world.y - player.radius < 0.0f)
 			{
 				player.pos.world.y = player.radius;
+
+				if (isRunAway)
+				{
+					screenNo = SCREEN_TYPE_START;
+					gameFrame = 0;
+
+					isRunAway = false;
+				}
 			}
 
 			if (player.pos.world.y + player.radius > static_cast<float>(kHeight) - 100.0f)
@@ -535,6 +580,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				player.pos.world.y = static_cast<float>(kHeight) - 100.0f - player.radius;
 			}
 
+
+			/*---------------
+			    敵を動かす
+			---------------*/
+
+			// 出現している（出現フラグがtrueである）敵を動かす
+			for (int i = 0; i < kEnemyNum; i++)
+			{
+				if (enemy[i].isArrival)
+				{
+					switch (enemy[i].type)
+					{
+					case ENEMY_TYPE_DENGER:
+
+						enemy[i].radius += 0.5f;
+
+						break;
+					}
+
+
+					// 敵を動かす
+					enemy[i].pos.world.x += enemy[i].vel.x;
+					enemy[i].pos.world.y += enemy[i].vel.y;
+				}
+			}
 
 			/*----------------
 				当たり判定
@@ -545,7 +615,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			{
 				if (enemy[i].isArrival)
 				{
-					if (powf(player.radius + enemy[i].radius + 100.0f, 2) >
+					if (powf((player.radius * 3) + enemy[i].radius, 2) >
 						powf(enemy[i].pos.world.x - player.pos.world.x, 2) + powf(enemy[i].pos.world.y - player.pos.world.y, 2))
 					{
 						// プレイヤーが飛行している（飛行フラグがtrueになる）と、光る
@@ -613,6 +683,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 						// プレイヤーが逃げ始める（逃げるフラグがtrueになる）
 						isRunAway = true;
+
+						// 危険な何かが出現する
+						MakeEnemy(enemy, static_cast<float>(kWidth / 2), static_cast<float>(kHeight) - 100.0f, 0.0f, 0.0f, 0.0f, ENEMY_TYPE_DENGER);
 					}
 				}
 			}
@@ -653,45 +726,94 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		    図形や画像を描画する
 		------------------------*/
 
-		/*   プレイヤー   */
-
-		if (player.respawn.isRespawn)
+		switch (screenNo)
 		{
-			Novice::DrawEllipse
-			(
-				static_cast<int>(player.pos.screen.x), static_cast<int>(player.pos.screen.y),
-				static_cast<int>(player.radius), static_cast<int>(player.radius),
-				0.0f, 0xFFFFFFFF, kFillModeSolid
-			);
-		}
+		case SCREEN_TYPE_START:
 
-		
-		/*   敵   */
+			break;
 
-		for (int i = 0; i < kEnemyNum; i++)
-		{
-			if (enemy[i].isArrival)
+		case SCREEN_TYPE_GAME:
+
+			// 背景
+			Novice::DrawBox(0, 0, kWidth, kHeight, 0.0f, 0x000055FF, kFillModeSolid);
+
+
+			/*   プレイヤー   */
+
+			if (player.respawn.isRespawn)
+			{
+				if (player.flug.isFlying)
+				{
+					Novice::DrawEllipse
+					(
+						static_cast<int>(player.pos.screen.x), static_cast<int>(player.pos.screen.y),
+						static_cast<int>(player.radius) * 3, static_cast<int>(player.radius) * 3,
+						0.0f, 0x4444FFFF, kFillModeSolid
+					);
+
+					Novice::DrawEllipse
+					(
+						static_cast<int>(player.pos.screen.x), static_cast<int>(player.pos.screen.y),
+						static_cast<int>(player.radius) * 3, static_cast<int>(player.radius) * 3,
+						0.0f, 0xFFFF00FF, kFillModeWireFrame
+					);
+				}
+
+				Novice::DrawEllipse
+				(
+					static_cast<int>(player.pos.screen.x), static_cast<int>(player.pos.screen.y),
+					static_cast<int>(player.radius), static_cast<int>(player.radius),
+					0.0f, 0xFFFFFFFF, kFillModeSolid
+				);
+			}
+
+
+			/*   敵   */
+
+			for (int i = 0; i < kEnemyNum; i++)
+			{
+				if (enemy[i].isArrival)
+				{
+					switch (enemy[i].type)
+					{
+					case ENEMY_TYPE_STONE:
+
+						Novice::DrawEllipse
+						(
+							static_cast<int>(enemy[i].pos.screen.x), static_cast<int>(enemy[i].pos.screen.y),
+							static_cast<int>(enemy[i].radius), static_cast<int>(enemy[i].radius),
+							0.0f, 0xFFFFFF00 + enemy[i].transparency, kFillModeSolid
+						);
+
+						break;
+
+					case ENEMY_TYPE_DENGER:
+
+						Novice::DrawBox
+						(
+							static_cast<int>(enemy[i].pos.screen.x) - kWidth / 2, static_cast<int>(enemy[i].pos.screen.y - enemy[i].radius),
+							kWidth, static_cast<int>(enemy[i].radius) * 2, 0.0f, 0xFF0000FF, kFillModeSolid
+						);
+
+						break;
+					}
+				}
+			}
+
+
+			/*   アイテム   */
+
+			if (item.isArrival)
 			{
 				Novice::DrawEllipse
 				(
-					static_cast<int>(enemy[i].pos.screen.x), static_cast<int>(enemy[i].pos.screen.y),
-					static_cast<int>(enemy[i].radius) , static_cast<int>(enemy[i].radius) , 
-					0.0f , 0xFFFFFF00 + enemy[i].transparency, kFillModeSolid
+					static_cast<int>(item.pos.screen.x), static_cast<int>(item.pos.screen.y),
+					static_cast<int>(item.radius), static_cast<int>(item.radius),
+					0.0f, 0xFFFF00FF, kFillModeSolid
 				);
 			}
-		}
 
-
-		/*   アイテム   */
-
-		if (item.isArrival)
-		{
-			Novice::DrawEllipse
-			(
-				static_cast<int>(item.pos.screen.x) , static_cast<int>(item.pos.screen.y),
-				static_cast<int>(item.radius) , static_cast<int>(item.radius),
-				0.0f , 0xFFFF00FF , kFillModeSolid
-			);
+			break;
 		}
 
 
