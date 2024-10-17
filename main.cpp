@@ -262,6 +262,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// 構造体
 	struct Enemy enemy[kEnemyNum];
 
+	// 敵の種類
+	enum ENEMY_TYPE
+	{
+		ENEMY_TYPE_STONE,
+		ENEMY_TYPE_DENGER
+	};
+
 	for (int i = 0; i < kEnemyNum; i++)
 	{
 		// 出現しているかどうか（出現フラグ）
@@ -387,9 +394,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				{
 					MakeItem(&item , 350.0f , 650.0f , 0.0f , 0.0f , 20.0f);
 
-					MakeEnemy(enemy , 350.0f , 500.0f , 0.0f , 0.0f , 50.0f);
+					MakeEnemy(enemy , 350.0f , 500.0f , 0.0f , 0.0f , 50.0f , ENEMY_TYPE_STONE);
 
-					MakeEnemy(enemy, 100.0f, 300.0f, 0.0f, 0.0f, 50.0f);
+					MakeEnemy(enemy, 100.0f, 300.0f, 0.0f, 0.0f, 50.0f , ENEMY_TYPE_STONE);
 				}
 
 				break;
